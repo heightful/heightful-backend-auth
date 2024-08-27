@@ -1,0 +1,39 @@
+name: Trigger Package and Push
+
+on:
+  push:
+    branches:
+      - feature/*
+      - bugfix/*
+      - hotfix/*
+      - release/*
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Extract Short Commit SHA
+      id: extract_sha
+      run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
+    - name: Notify Deployment Repo
+      uses: actions/github-script@v7
+      with:
+        github-token: '${{ secrets.GH_TOKEN }}'
+        script: |
+          github.rest.repos.createDispatchEvent({
+            owner: '${{ github.repository_owner }}',
+            repo: 'overhang-devops-manifest',
+            event_type: 'package-push',
+            client_payload: {
+              service_repo: '${{ github.repository }}',
+              service_name: '${{ github.event.repository.name }}',
+              commit_sha: '${{ github.sha }}',
+              org_name: '${{ github.repository_owner }}',
+              image_tag: '${{ env.SHORT_SHA }}'
+            }
+          })
